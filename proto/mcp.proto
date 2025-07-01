@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package mcp;
+
+option go_package = "github.com/tartavull/mcp-manager/internal/grpc/pb";
+
+service MCPManager {
+  // Basic server operations
+  rpc ListServers(Empty) returns (ServerList);
+  rpc GetServer(ServerRequest) returns (Server);
+  rpc StartServer(ServerRequest) returns (Server);
+  rpc StopServer(ServerRequest) returns (Server);
+  
+  // Tool information
+  rpc GetTools(ServerRequest) returns (ToolList);
+  
+  // Configuration
+  rpc GetConfig(Empty) returns (Config);
+  rpc ReloadConfig(Empty) returns (StatusResponse);
+  rpc GetConfigPath(Empty) returns (PathResponse);
+  
+  // Real-time streaming
+  rpc Subscribe(SubscribeRequest) returns (stream Event);
+  
+  // Health check
+  rpc Health(Empty) returns (HealthStatus);
+}
+
+// Basic messages
+message Empty {}
+
+message ServerRequest {
+  string name = 1;
+}
+
+message StatusResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message PathResponse {
+  string path = 1;
+}
+
+// Server related messages
+message Server {
+  string name = 1;
+  string command = 2;
+  int32 port = 3;
+  string description = 4;
+  ServerStatus status = 5;
+  int32 pid = 6;
+  int32 tool_count = 7;
+  repeated Tool tools = 8;
+  int64 last_updated = 9; // Unix timestamp
+}
+
+message ServerList {
+  repeated Server servers = 1;
+  repeated string order = 2; // Preserved JSON order
+}
+
+enum ServerStatus {
+  STOPPED = 0;
+  STARTING = 1;
+  RUNNING = 2;
+  STOPPING = 3;
+  ERROR = 4;
+}
+
+// Tool related messages
+message Tool {
+  string name = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message ToolList {
+  repeated Tool tools = 1;
+}
+
+// Configuration messages
+message Config {
+  string config_path = 1;
+  map<string, ServerConfig> servers = 2;
+  repeated string server_order = 3;
+}
+
+message ServerConfig {
+  string command = 1;
+  int32 port = 2;
+  string description = 3;
+}
+
+// Streaming messages
+message SubscribeRequest {
+  repeated EventType event_types = 1;
+}
+
+enum EventType {
+  ALL = 0;
+  SERVER_STATUS = 1;
+  TOOL_UPDATE = 2;
+  CONFIG_CHANGE = 3;
+}
+
+message Event {
+  EventType type = 1;
+  int64 timestamp = 2;
+  
+  oneof payload {
+    ServerStatusEvent server_status = 3;
+    ToolUpdateEvent tool_update = 4;
+    ConfigChangeEvent config_change = 5;
+  }
+}
+
+message ServerStatusEvent {
+  string server_name = 1;
+  ServerStatus old_status = 2;
+  ServerStatus new_status = 3;
+}
+
+message ToolUpdateEvent {
+  string server_name = 1;
+  int32 tool_count = 2;
+  repeated Tool tools = 3;
+}
+
+message ConfigChangeEvent {
+  repeated string servers_added = 1;
+  repeated string servers_removed = 2;
+  repeated string servers_modified = 3;
+}
+
+// Health check
+message HealthStatus {
+  bool healthy = 1;
+  int64 uptime_seconds = 2;
+  int32 running_servers = 3;
+  int32 total_servers = 4;
+} 

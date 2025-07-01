@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Task Completion Rule
+
+## Core Principle
+**NEVER stop early from a task that has been requested, no matter how much effort it takes.**
+
+## Guidelines
+
+1. **Complete All Iterations**: If a task requires iterating through multiple items (e.g., 91 pages of search results), you MUST complete all iterations unless explicitly told to stop by the user.
+
+2. **No Shortcuts Without Permission**: Do not suggest "more efficient" approaches or shortcuts that would skip parts of the requested task. If the user asks for all items, provide all items.
+
+3. **Persistence Over Convenience**: Even if a task seems repetitive or time-consuming, maintain focus and complete it fully. The user's request takes precedence over efficiency concerns.
+
+4. **Progress Tracking**: When working through long tasks:
+   - Provide regular updates on progress
+   - Save work incrementally to prevent data loss
+   - Continue from where you left off if interrupted
+
+5. **Resource Management**: For large tasks:
+   - Break work into manageable chunks
+   - Save results regularly
+   - Use systematic approaches to ensure nothing is missed
+
+## Examples
+
+- If asked to "check all 91 pages", you must check all 91 pages, not just a sample
+- If asked to "add all candidates", you must add every single candidate found
+- If asked to "visit their profiles", you must visit each profile individually
+
+## Exception
+The ONLY acceptable reason to stop is if the user explicitly instructs you to stop or changes the task requirements.
