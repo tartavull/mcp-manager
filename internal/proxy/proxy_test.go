@@ -14,9 +14,50 @@ import (
 
 // getMockMCPCommand returns a command that simulates an MCP server
 func getMockMCPCommand() string {
-	// This command outputs a valid JSON-RPC response for the initialize method
-	// and then waits to simulate a running server
-	return `echo '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"mock-server","version":"1.0.0"}}}' && sleep 100`
+	// This command creates a mock MCP server that handles multiple requests
+	return `python3 -c "
+import json
+import sys
+
+# Handle initialize request
+request = json.loads(sys.stdin.readline())
+response = {
+    'jsonrpc': '2.0',
+    'id': request['id'],
+    'result': {
+        'protocolVersion': '2024-11-05',
+        'capabilities': {'tools': {'listChanged': True}},
+        'serverInfo': {'name': 'mock-server', 'version': '1.0.0'}
+    }
+}
+print(json.dumps(response))
+sys.stdout.flush()
+
+# Handle subsequent requests
+while True:
+    try:
+        request = json.loads(sys.stdin.readline())
+        if request['method'] == 'tools/list':
+            response = {
+                'jsonrpc': '2.0',
+                'id': request['id'],
+                'result': {
+                    'tools': [
+                        {'name': 'test_tool', 'description': 'A test tool'}
+                    ]
+                }
+            }
+        else:
+            response = {
+                'jsonrpc': '2.0',
+                'id': request['id'],
+                'result': {}
+            }
+        print(json.dumps(response))
+        sys.stdout.flush()
+    except:
+        break
+"`
 }
 
 func TestNew(t *testing.T) {
@@ -270,7 +311,9 @@ func TestServer_NotFoundEndpoint(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	// The default handler returns 405 Method Not Allowed for GET requests
+	// since it only handles POST for MCP proxy
+	assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 }
 
 func TestMCPRequest_JSON(t *testing.T) {
