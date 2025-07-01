@@ -10,7 +10,7 @@ type ManagerInterface interface {
 	StartServer(name string) error
 	StopServer(name string) error
 	GetConfigPath() (string, error)
-	UpdateToolCounts()
+	UpdateToolCounts() error
 	StopAllServers()
 	Stop() error
 }

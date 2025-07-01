@@ -8,6 +8,23 @@
 
 The MCP Manager now supports a client-server architecture using gRPC. This allows the manager to run as a background daemon process while multiple clients can connect to control and monitor servers.
 
+## Motivation
+
+This project was created to solve a fundamental limitation in the MCP ecosystem: **most MCP servers only support stdin/stdout communication**, which makes them incompatible with scenarios requiring:
+
+- Multiple concurrent client connections
+- Long-running persistent sessions
+- Remote access over network protocols
+- Integration with web services and APIs
+
+The MCP Manager acts as a **proxy layer** that bridges this gap by:
+1. Managing MCP server processes that communicate via stdin/stdout
+2. Exposing their functionality through HTTP/gRPC endpoints
+3. Maintaining persistent server instances across multiple client requests
+4. Providing a unified interface for both stdio-based and HTTP-based MCP servers
+
+This is particularly important for servers like Playwright MCP, which need to maintain browser state between operations, but traditionally only supported stdio communication.
+
 ## Architecture
 
 ```

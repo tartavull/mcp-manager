@@ -50,21 +50,24 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, manager.config)
 
 	// Should have default servers
-	servers := manager.GetServers()
+	servers, _, err := manager.GetServers()
+	require.NoError(t, err)
 	assert.Greater(t, len(servers), 0)
 }
 
 func TestManager_GetServers(t *testing.T) {
 	manager := createTestManager(t)
 
-	servers := manager.GetServers()
+	servers, _, err := manager.GetServers()
+	require.NoError(t, err)
 	assert.Len(t, servers, 2)
 	assert.Contains(t, servers, "test1")
 	assert.Contains(t, servers, "test2")
 
 	// Verify it returns a copy
 	delete(servers, "test1")
-	originalServers := manager.GetServers()
+	originalServers, _, err := manager.GetServers()
+	require.NoError(t, err)
 	assert.Contains(t, originalServers, "test1")
 }
 
@@ -72,13 +75,13 @@ func TestManager_GetServer(t *testing.T) {
 	manager := createTestManager(t)
 
 	// Get existing server
-	srv, exists := manager.GetServer("test1")
-	assert.True(t, exists)
+	srv, err := manager.GetServer("test1")
+	require.NoError(t, err)
 	assert.Equal(t, "test1", srv.Name)
 
 	// Get non-existent server
-	_, exists = manager.GetServer("nonexistent")
-	assert.False(t, exists)
+	_, err = manager.GetServer("nonexistent")
+	assert.Error(t, err)
 }
 
 func TestManager_AddServer(t *testing.T) {
@@ -89,8 +92,8 @@ func TestManager_AddServer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify server was added
-	srv, exists := manager.GetServer("test3")
-	assert.True(t, exists)
+	srv, err := manager.GetServer("test3")
+	require.NoError(t, err)
 	assert.Equal(t, "test3", srv.Name)
 	assert.Equal(t, "echo test3", srv.Command)
 	assert.Equal(t, 4003, srv.Port)
@@ -110,8 +113,8 @@ func TestManager_RemoveServer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify server was removed
-	_, exists := manager.GetServer("test1")
-	assert.False(t, exists)
+	_, err = manager.GetServer("test1")
+	assert.Error(t, err)
 
 	// Try to remove non-existent server
 	err = manager.RemoveServer("nonexistent")
@@ -119,45 +122,9 @@ func TestManager_RemoveServer(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestManager_ToggleServer(t *testing.T) {
-	manager := createTestManager(t)
+// Test removed - ToggleServer functionality no longer exists
 
-	srv, _ := manager.GetServer("test1")
-	initialEnabled := srv.IsEnabled()
-
-	// Toggle server
-	err := manager.ToggleServer("test1")
-	require.NoError(t, err)
-
-	// Verify status changed
-	srv, _ = manager.GetServer("test1")
-	assert.Equal(t, !initialEnabled, srv.IsEnabled())
-
-	// Toggle again
-	err = manager.ToggleServer("test1")
-	require.NoError(t, err)
-
-	srv, _ = manager.GetServer("test1")
-	assert.Equal(t, initialEnabled, srv.IsEnabled())
-
-	// Try to toggle non-existent server
-	err = manager.ToggleServer("nonexistent")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
-}
-
-func TestManager_StartServer_DisabledServer(t *testing.T) {
-	manager := createTestManager(t)
-
-	// Disable server first
-	srv, _ := manager.GetServer("test1")
-	srv.Toggle() // Disable it
-
-	// Try to start disabled server
-	err := manager.StartServer("test1")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "disabled")
-}
+// Test removed - server enable/disable functionality no longer exists
 
 func TestManager_StartServer_NonExistentServer(t *testing.T) {
 	manager := createTestManager(t)
@@ -186,14 +153,10 @@ func TestManager_StopServer_NonExistentServer(t *testing.T) {
 func TestManager_StartAllServers(t *testing.T) {
 	manager := createTestManager(t)
 
-	// Disable one server
-	srv, _ := manager.GetServer("test2")
-	srv.Toggle()
-
 	// This should not error even if some servers fail to start
 	manager.StartAllServers()
 
-	// Verify enabled servers were attempted to start
+	// Verify servers were attempted to start
 	// (Note: they may not actually start due to echo command, but status should change)
 }
 
@@ -221,7 +184,8 @@ func TestManager_UpdateToolCounts(t *testing.T) {
 	srv.SetStatus(server.StatusRunning)
 
 	// This should not error even if tool count update fails
-	manager.UpdateToolCounts()
+	err := manager.UpdateToolCounts()
+	assert.NoError(t, err)
 }
 
 func TestManager_updateServerStatuses(t *testing.T) {
@@ -284,7 +248,6 @@ func TestManager_ConcurrentOperations(t *testing.T) {
 	operations := []func(){
 		func() { manager.GetServers() },
 		func() { manager.GetServer("test1") },
-		func() { manager.ToggleServer("test1") },
 		func() { manager.AddServer("concurrent", "echo test", 5000, "Concurrent test") },
 		func() { manager.UpdateToolCounts() },
 	}
@@ -326,7 +289,7 @@ func TestManager_ListServers(t *testing.T) {
 	srv1.SetToolCount(10)
 
 	srv2, _ := manager.GetServer("test2")
-	srv2.Toggle() // Disable
+	srv2.SetStatus(server.StatusStopped)
 
 	manager.ListServers()
 }
@@ -366,6 +329,7 @@ func TestManager_ThreadSafety(t *testing.T) {
 	}
 
 	// Manager should still be in a consistent state
-	servers := manager.GetServers()
+	servers, _, err := manager.GetServers()
+	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(servers), 2) // At least our original test servers
 }

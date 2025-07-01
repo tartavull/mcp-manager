@@ -56,6 +56,11 @@ func TestRealMCPServersToolCounts(t *testing.T) {
 
 	// Add and start test servers
 	for _, ts := range testServers {
+		// Remove existing server if it exists
+		if _, err := mgr.GetServer(ts.name); err == nil {
+			mgr.RemoveServer(ts.name)
+		}
+
 		err := mgr.AddServer(ts.name, ts.command, ts.port, ts.description)
 		require.NoError(t, err)
 

@@ -293,18 +293,7 @@ func TestModel_View_ServerStates(t *testing.T) {
 	assert.Contains(t, view, "10")      // test1 tool count
 }
 
-func TestGetOrderedServerNamesByPort(t *testing.T) {
-	servers := map[string]*server.Server{
-		"zebra": server.NewServer("zebra", "cmd", 4003, "desc"),
-		"alpha": server.NewServer("alpha", "cmd", 4001, "desc"),
-		"beta":  server.NewServer("beta", "cmd", 4002, "desc"),
-	}
-
-	names := getOrderedServerNamesByPort(servers)
-
-	// Should be sorted by port number
-	assert.Equal(t, []string{"alpha", "beta", "zebra"}, names)
-}
+// Test removed - getOrderedServerNamesByPort functionality no longer exists
 
 func TestCountRunningServers(t *testing.T) {
 	servers := map[string]*server.Server{

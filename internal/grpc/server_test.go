@@ -23,17 +23,20 @@ type mockManager struct {
 	configPath  string
 }
 
-func (m *mockManager) GetServers() map[string]*server.Server {
-	return m.servers
+func (m *mockManager) GetServers() (map[string]*server.Server, []string, error) {
+	return m.servers, m.serverOrder, nil
 }
 
-func (m *mockManager) GetServerOrder() []string {
-	return m.serverOrder
+func (m *mockManager) GetServerOrder() ([]string, error) {
+	return m.serverOrder, nil
 }
 
-func (m *mockManager) GetServer(name string) (*server.Server, bool) {
+func (m *mockManager) GetServer(name string) (*server.Server, error) {
 	srv, exists := m.servers[name]
-	return srv, exists
+	if !exists {
+		return nil, fmt.Errorf("server %s not found", name)
+	}
+	return srv, nil
 }
 
 func (m *mockManager) StartServer(name string) error {
@@ -54,12 +57,13 @@ func (m *mockManager) StopServer(name string) error {
 	return fmt.Errorf("server not found")
 }
 
-func (m *mockManager) GetConfigPath() string {
-	return m.configPath
+func (m *mockManager) GetConfigPath() (string, error) {
+	return m.configPath, nil
 }
 
-func (m *mockManager) UpdateToolCounts() {
+func (m *mockManager) UpdateToolCounts() error {
 	// No-op for tests
+	return nil
 }
 
 func (m *mockManager) StopAllServers() {
@@ -247,8 +251,8 @@ func TestHealth(t *testing.T) {
 	resp, err := client.Health(ctx, &pb.Empty{})
 	require.NoError(t, err)
 	assert.True(t, resp.Healthy)
-	assert.Greater(t, resp.UptimeSeconds, int64(0))
-	assert.Equal(t, int32(1), resp.RunningServers) // one server is running
+	assert.GreaterOrEqual(t, resp.UptimeSeconds, int64(0)) // May be 0 if server just started
+	assert.Equal(t, int32(1), resp.RunningServers)         // one server is running
 	assert.Equal(t, int32(2), resp.TotalServers)
 }
 
@@ -306,12 +310,12 @@ func TestHelperFunctions(t *testing.T) {
 		LastUpdated: time.Now(),
 	}
 
-	pb := serverToProto(srv)
-	assert.Equal(t, "test", pb.Name)
-	assert.Equal(t, int32(4001), pb.Port)
-	assert.Equal(t, pb.ServerStatus_RUNNING, pb.Status)
-	assert.Equal(t, int32(12345), pb.Pid)
-	assert.Len(t, pb.Tools, 1)
+	protoSrv := serverToProto(srv)
+	assert.Equal(t, "test", protoSrv.Name)
+	assert.Equal(t, int32(4001), protoSrv.Port)
+	assert.Equal(t, pb.ServerStatus_RUNNING, protoSrv.Status)
+	assert.Equal(t, int32(12345), protoSrv.Pid)
+	assert.Len(t, protoSrv.Tools, 1)
 
 	// Test statusToProto
 	assert.Equal(t, pb.ServerStatus_STOPPED, statusToProto(server.StatusStopped))

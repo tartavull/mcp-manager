@@ -383,13 +383,17 @@ func (m *Manager) updateServerStatuses() {
 }
 
 // UpdateToolCounts updates tool counts for all running servers
-func (m *Manager) UpdateToolCounts() {
-	servers, _, _ := m.GetServers()
+func (m *Manager) UpdateToolCounts() error {
+	servers, _, err := m.GetServers()
+	if err != nil {
+		return err
+	}
 	for name, srv := range servers {
 		if srv.IsRunning() {
 			go m.updateToolCount(name)
 		}
 	}
+	return nil
 }
 
 // updateToolCount updates the tool count for a specific server

@@ -22,7 +22,6 @@ func TestNewServer(t *testing.T) {
 	assert.Equal(t, port, server.Port)
 	assert.Equal(t, description, server.Description)
 	assert.Equal(t, StatusStopped, server.Status)
-	assert.True(t, server.Enabled)
 	assert.Equal(t, 0, server.PID)
 	assert.Equal(t, 0, server.ToolCount)
 	assert.WithinDuration(t, time.Now(), server.LastUpdated, time.Second)
@@ -51,20 +50,7 @@ func TestServer_IsRunning(t *testing.T) {
 	assert.False(t, server.IsRunning())
 }
 
-func TestServer_IsEnabled(t *testing.T) {
-	server := NewServer("test", "cmd", 4001, "desc")
-
-	// Initially enabled
-	assert.True(t, server.IsEnabled())
-
-	// Toggle to disabled
-	server.Toggle()
-	assert.False(t, server.IsEnabled())
-
-	// Toggle back to enabled
-	server.Toggle()
-	assert.True(t, server.IsEnabled())
-}
+// Test removed - IsEnabled/Toggle functionality no longer exists
 
 func TestServer_SetStatus(t *testing.T) {
 	server := NewServer("test", "cmd", 4001, "desc")
@@ -107,23 +93,7 @@ func TestServer_SetToolCount(t *testing.T) {
 	assert.True(t, server.LastUpdated.After(initialTime))
 }
 
-func TestServer_Toggle(t *testing.T) {
-	server := NewServer("test", "cmd", 4001, "desc")
-	initialTime := server.LastUpdated
-
-	// Wait a bit to ensure time difference
-	time.Sleep(10 * time.Millisecond)
-
-	// Initially enabled
-	assert.True(t, server.Enabled)
-
-	server.Toggle()
-	assert.False(t, server.Enabled)
-	assert.True(t, server.LastUpdated.After(initialTime))
-
-	server.Toggle()
-	assert.True(t, server.Enabled)
-}
+// Test removed - Toggle functionality no longer exists
 
 func TestServer_GetProxyURL(t *testing.T) {
 	port := 4001
@@ -153,7 +123,6 @@ func TestServer_JSON(t *testing.T) {
 	assert.Equal(t, server.Description, newServer.Description)
 	assert.Equal(t, server.Status, newServer.Status)
 	assert.Equal(t, server.PID, newServer.PID)
-	assert.Equal(t, server.Enabled, newServer.Enabled)
 	assert.Equal(t, server.ToolCount, newServer.ToolCount)
 }
 
@@ -181,11 +150,10 @@ func TestGetDefaultServers(t *testing.T) {
 		assert.Greater(t, server.Port, 0)
 		assert.NotEmpty(t, server.Description)
 		assert.Equal(t, StatusStopped, server.Status)
-		assert.True(t, server.Enabled)
 	}
 
 	// Check for some specific expected servers
-	expectedServers := []string{"playwright", "filesystem", "git"}
+	expectedServers := []string{"filesystem", "github", "postgres"}
 	for _, expected := range expectedServers {
 		assert.True(t, serverNames[expected], "Expected server %s not found", expected)
 	}

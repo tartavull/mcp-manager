@@ -51,7 +51,8 @@ func TestJSONOrderUpdatesAutomatically(t *testing.T) {
 	defer mgr.Stop()
 
 	// Verify initial order
-	initialOrder := mgr.GetServerOrder()
+	initialOrder, err := mgr.GetServerOrder()
+	require.NoError(t, err)
 	assert.Equal(t, []string{"alpha", "beta", "gamma"}, initialOrder)
 
 	// Update config with different order
@@ -80,12 +81,14 @@ func TestJSONOrderUpdatesAutomatically(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Verify order has updated
-	newOrder := mgr.GetServerOrder()
+	newOrder, err := mgr.GetServerOrder()
+	require.NoError(t, err)
 	assert.Equal(t, []string{"gamma", "alpha", "beta"}, newOrder,
 		"Server order should reflect the new JSON order")
 
 	// Verify servers still exist
-	servers := mgr.GetServers()
+	servers, _, err := mgr.GetServers()
+	require.NoError(t, err)
 	assert.Len(t, servers, 3)
 	assert.Contains(t, servers, "alpha")
 	assert.Contains(t, servers, "beta")
