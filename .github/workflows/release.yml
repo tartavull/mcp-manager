@@ -1,0 +1,43 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Pre-release version'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Create and push tag
+        run: |
+          VERSION="v${{ inputs.version }}"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+      - name: Trigger CI/CD workflow
+        run: |
+          echo "Tag created: v${{ inputs.version }}"
+          echo "The CI/CD workflow will automatically build and release the binaries" 

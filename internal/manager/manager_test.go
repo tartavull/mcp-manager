@@ -292,7 +292,7 @@ func TestManager_ConcurrentOperations(t *testing.T) {
 	for i, op := range operations {
 		go func(i int, operation func()) {
 			defer func() { done <- true }()
-			
+
 			// Perform operation multiple times
 			for j := 0; j < 5; j++ {
 				operation()
@@ -336,7 +336,7 @@ func TestManager_ThreadSafety(t *testing.T) {
 
 	// Test concurrent reads and writes
 	done := make(chan bool)
-	
+
 	// Reader goroutines
 	for i := 0; i < 5; i++ {
 		go func() {

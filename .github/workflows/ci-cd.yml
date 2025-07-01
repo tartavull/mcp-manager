@@ -1,0 +1,205 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-community
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        continue-on-error: true
+
+      - name: Run tests with Nix
+        run: |
+          nix develop --command make proto
+          nix develop --command make deps
+          nix develop --command make check
+
+      - name: Run integration tests
+        run: |
+          nix develop --command make test-coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            suffix: windows-amd64.exe
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-community
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        continue-on-error: true
+
+      - name: Build binaries with Nix
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          nix develop --command bash -c "
+            make proto
+            make deps
+            
+            # Build daemon
+            GOOS=$GOOS GOARCH=$GOARCH go build -ldflags='-s -w' -o ./bin/mcp-daemon-${{ matrix.suffix }} ./cmd/mcp-daemon/main.go
+            
+            # Build manager
+            GOOS=$GOOS GOARCH=$GOARCH go build -ldflags='-s -w' -o ./bin/mcp-manager-${{ matrix.suffix }} ./cmd/mcp-manager/main.go
+          "
+
+      - name: Create tarball
+        if: matrix.goos != 'windows'
+        run: |
+          cd bin
+          tar -czf mcp-manager-${{ matrix.suffix }}.tar.gz mcp-daemon-${{ matrix.suffix }} mcp-manager-${{ matrix.suffix }}
+          cd ..
+
+      - name: Create zip
+        if: matrix.goos == 'windows'
+        run: |
+          cd bin
+          zip mcp-manager-${{ matrix.suffix }}.zip mcp-daemon-${{ matrix.suffix }} mcp-manager-${{ matrix.suffix }}
+          cd ..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.suffix }}
+          path: |
+            bin/*.tar.gz
+            bin/*.zip
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          path: ./release
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          cd release
+          sha256sum *.tar.gz *.zip > checksums.txt
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.tar.gz
+            release/*.zip
+            release/checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### macOS/Linux
+            ```bash
+            # Download the appropriate binary for your system
+            # For macOS M1/M2:
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-manager-darwin-arm64.tar.gz | tar -xz
+            
+            # For macOS Intel:
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-manager-darwin-amd64.tar.gz | tar -xz
+            
+            # For Linux amd64:
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-manager-linux-amd64.tar.gz | tar -xz
+            
+            # For Linux arm64:
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-manager-linux-arm64.tar.gz | tar -xz
+            
+            # Make binaries executable
+            chmod +x mcp-daemon-* mcp-manager-*
+            
+            # Move to PATH (optional)
+            sudo mv mcp-daemon-* /usr/local/bin/mcp-daemon
+            sudo mv mcp-manager-* /usr/local/bin/mcp-manager
+            ```
+
+            ### Windows
+            Download the Windows zip file and extract the binaries.
+
+            ### Verify checksums
+            ```bash
+            # Download checksums
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/checksums.txt -o checksums.txt
+            
+            # Verify your download
+            sha256sum -c checksums.txt --ignore-missing
+            ``` 

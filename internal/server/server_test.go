@@ -159,7 +159,7 @@ func TestServer_JSON(t *testing.T) {
 
 func TestFromJSON_InvalidData(t *testing.T) {
 	invalidJSON := []byte(`{"invalid": json}`)
-	
+
 	_, err := FromJSON(invalidJSON)
 	assert.Error(t, err)
 }
@@ -174,7 +174,7 @@ func TestGetDefaultServers(t *testing.T) {
 	serverNames := make(map[string]bool)
 	for _, server := range defaultServers {
 		serverNames[server.Name] = true
-		
+
 		// All servers should have required fields
 		assert.NotEmpty(t, server.Name)
 		assert.NotEmpty(t, server.Command)

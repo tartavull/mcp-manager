@@ -95,9 +95,9 @@ fmt:
 # Check formatting
 fmt-check:
 	@echo "🔍 Checking code formatting..."
-	@if [ -n "$$($(GOFMT) -l .)" ]; then \
+	@if [ -n "$$(find . -name '*.go' -not -path './vendor/*' -exec $(GOFMT) -l {} +)" ]; then \
 		echo "❌ Code is not formatted. Files needing formatting:"; \
-		$(GOFMT) -l .; \
+		find . -name '*.go' -not -path './vendor/*' -exec $(GOFMT) -l {} +; \
 		echo "Run 'make fmt' to fix"; \
 		exit 1; \
 	else \

@@ -1,5 +1,9 @@
 # MCP Manager gRPC Architecture
 
+[![CI/CD](https://github.com/tartavull/mcp-manager/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tartavull/mcp-manager/actions/workflows/ci-cd.yml)
+[![Release](https://img.shields.io/github/v/release/tartavull/mcp-manager)](https://github.com/tartavull/mcp-manager/releases)
+[![License](https://img.shields.io/github/license/tartavull/mcp-manager)](LICENSE)
+
 ## Overview
 
 The MCP Manager now supports a client-server architecture using gRPC. This allows the manager to run as a background daemon process while multiple clients can connect to control and monitor servers.
@@ -73,11 +77,38 @@ make fmt            # Format code
 
 ## Installation (Production)
 
+### Download Pre-built Binaries
+
+Download the latest release for your platform from the [releases page](https://github.com/tartavull/mcp-manager/releases).
+
+```bash
+# Example for macOS M1/M2
+curl -L https://github.com/tartavull/mcp-manager/releases/latest/download/mcp-manager-darwin-arm64.tar.gz | tar -xz
+chmod +x mcp-daemon-* mcp-manager-*
+sudo mv mcp-daemon-* /usr/local/bin/mcp-daemon
+sudo mv mcp-manager-* /usr/local/bin/mcp-manager
+```
+
+### Build from Source
+
 For production use, build the binaries:
 
 ```bash
 make build
 make install    # Installs to $GOPATH/bin
+```
+
+### Build with Nix
+
+You can also build reproducible binaries using Nix:
+
+```bash
+# Build both binaries
+nix build
+
+# Build specific binary
+nix build .#mcp-daemon
+nix build .#mcp-manager
 ```
 
 Then use the installed binaries:
@@ -118,6 +149,42 @@ The daemon exposes a gRPC API defined in `proto/mcp.proto`:
 - `ReloadConfig` - Reload configuration file
 
 ## Development
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI**: Runs on every push and pull request
+  - Tests on Ubuntu and macOS
+  - Checks code formatting and linting
+  - Generates test coverage reports
+  
+- **CD**: Automatically creates releases when tags are pushed
+  - Builds binaries for multiple platforms (Linux, macOS, Windows)
+  - Creates GitHub releases with checksums
+  - Uses Nix for reproducible builds
+
+### Creating a Release
+
+To create a new release:
+
+1. **Using GitHub Actions** (recommended):
+   ```bash
+   # Go to Actions → Create Release workflow
+   # Enter version number (e.g., 0.1.0)
+   # This will create a tag and trigger the release
+   ```
+
+2. **Manual tag**:
+   ```bash
+   git tag -a v0.1.0 -m "Release v0.1.0"
+   git push origin v0.1.0
+   ```
+
+The CI/CD pipeline will automatically:
+- Run all tests
+- Build binaries for all platforms
+- Create a GitHub release with the binaries
 
 ### Running Tests
 

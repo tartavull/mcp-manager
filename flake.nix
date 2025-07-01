@@ -11,23 +11,48 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         
-        # Optional: Nix packages for release builds
-        # Uncomment if you want reproducible release builds
-        # mcp-daemon = pkgs.buildGoModule {
-        #   pname = "mcp-daemon";
-        #   version = "0.1.0";
-        #   src = ./.;
-        #   vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-        #   subPackages = [ "cmd/mcp-daemon" ];
-        # };
-        #
-        # mcp-manager = pkgs.buildGoModule {
-        #   pname = "mcp-manager";
-        #   version = "0.1.0";
-        #   src = ./.;
-        #   vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-        #   subPackages = [ "cmd/mcp-manager" ];
-        # };
+        # Nix packages for reproducible builds
+        mcp-daemon = pkgs.buildGoModule {
+          pname = "mcp-daemon";
+          version = "0.1.0";
+          src = ./.;
+          vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # Update with scripts/update-vendor-hash.sh
+          subPackages = [ "cmd/mcp-daemon" ];
+          
+          # Generate protobuf before building
+          preBuild = ''
+            ${pkgs.protobuf}/bin/protoc \
+              --go_out=internal/grpc/pb \
+              --go_opt=paths=source_relative \
+              --go-grpc_out=internal/grpc/pb \
+              --go-grpc_opt=paths=source_relative \
+              -I proto \
+              proto/*.proto
+          '';
+          
+          nativeBuildInputs = [ pkgs.protobuf pkgs.protoc-gen-go pkgs.protoc-gen-go-grpc ];
+        };
+        
+        mcp-manager = pkgs.buildGoModule {
+          pname = "mcp-manager";
+          version = "0.1.0";
+          src = ./.;
+          vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # Update with scripts/update-vendor-hash.sh
+          subPackages = [ "cmd/mcp-manager" ];
+          
+          # Generate protobuf before building
+          preBuild = ''
+            ${pkgs.protobuf}/bin/protoc \
+              --go_out=internal/grpc/pb \
+              --go_opt=paths=source_relative \
+              --go-grpc_out=internal/grpc/pb \
+              --go-grpc_opt=paths=source_relative \
+              -I proto \
+              proto/*.proto
+          '';
+          
+          nativeBuildInputs = [ pkgs.protobuf pkgs.protoc-gen-go pkgs.protoc-gen-go-grpc ];
+        };
       in
       {
         # Development shell only - use Makefile for builds
@@ -93,10 +118,10 @@
           '';
         };
         
-        # Optional: Uncomment for release builds
-        # packages = {
-        #   inherit mcp-daemon mcp-manager;
-        #   default = mcp-manager;
-        # };
+        # Package definitions for reproducible builds
+        packages = {
+          inherit mcp-daemon mcp-manager;
+          default = mcp-manager;
+        };
       });
 } 

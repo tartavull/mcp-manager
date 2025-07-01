@@ -68,4 +68,18 @@ htmlcov/
 
 # Node (for future use)
 node_modules/
-package-lock.json 
+package-lock.json
+
+# Go
+bin/
+*.exe
+*.test
+*.out
+coverage.html
+vendor/
+
+# CI/CD artifacts
+release/
+*.tar.gz
+*.zip
+checksums.txt 
